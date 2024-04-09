@@ -12,7 +12,7 @@ or
 
 snakemake --snakefile STG_Snakefile_CT_Sp_2024 /working/dir/{sample1,sample2,sampleX}_fragments.bedgraph
 
-# input fastq (.fq.gz) file names should follow the pattern:
+# input file names should follow the pattern:
 
 sample1_R1.fq.gz
 sample1_R2.fq.gz
@@ -22,5 +22,3 @@ sample2_R2.fq.gz
 
 sampleX_R1.fq.gz
 sampleX_R2.fq.gz
-
-# Please see full Snakemake documentation at: https://snakemake.readthedocs.io/en/stable/
