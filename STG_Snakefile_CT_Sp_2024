@@ -1,0 +1,69 @@
+#### STG_Snakefile_CT_Sp_2024 ####
+
+homedir="/path/to/working/dir/"
+
+rule cutadapt:
+    input: 
+        P1 = homedir+"{sample}_R1.fq.gz",
+        P2 = homedir+"{sample}_R2.fq.gz",
+    output:
+        TP1 = homedir+"{sample}_R1_trimmed.fq.gz",
+        TP2 = homedir+"{sample}_R2_trimmed.fq.gz",
+    resources:
+        tmpdir = homedir+"tmp/",
+    shell:
+        "cutadapt -a CTGTCTCTTATACACATCT -A CTGTCTCTTATACACATCT -o {output.TP1} -p {output.TP2} {input.P1} {input.P2}"
+   
+    # -a CTGTCTCTTATACACATCT  remove nextera sequence from 3' of Read 1 (forward)
+    # -A CTGTCTCTTATACACATCT  remove nextera sequence from 3' of Read 2 (reverse)
+    # -o out.1.fastq 
+    # -p out.2.fastq
+    # reads.1.fastq 
+    # reads.2.fastq
+
+rule Bowtie2_and_sort:
+    input: 
+        P1 = homedir+"{sample}_R1_trimmed.fq.gz",
+        P2 = homedir+"{sample}_R2_trimmed.fq.gz",
+    output:
+        TP1 = homedir+"{sample}_sorted.bam",
+        TP2 = homedir+"{sample}_bowtie2.log",
+        TP3 = homedir+"{sample}_bowtie2_metrics.log",
+    resources:
+        tmpdir = homedir+"tmp/",
+    shell:
+        "bowtie2 --local --quiet --very-sensitive-local --no-mixed --no-discordant --phred33 -I 10 -X 700 -p 5 -x /path/to/bowtie2/indexes/pombe_ASM294v2.20 -1 {input.P1} -2 {input.P2} 2>{output.TP2} --met-file {output.TP3} | samtools view -bS - | samtools sort - -o {output.TP1}"
+
+rule index_sorted_bam:
+    input:
+        homedir+"{sample}_sorted.bam",
+    output:
+        homedir+"{sample}_sorted.bam.bai",
+    resources:
+        tmpdir = homedir+"tmp/",
+    shell:
+       "samtools index {input} {output}"
+
+rule sorted_bam_to_bigWig:
+    input:
+        B1 = homedir+"{sample}_sorted.bam",
+        B2 = homedir+"{sample}_sorted.bam.bai",
+    output:
+        homedir+"{sample}.bw",
+    resources:
+        tmpdir = homedir+"tmp/",
+    shell:
+        "bamCoverage -b {input.B1} -o {output} -bs 5 --normalizeUsing RPKM"
+
+########### Processing _sorted.bam to obtain a .bedgraph file that can be uses for peak calling using SEACR ###########
+
+rule sorted_bam_to_fragments_bedgraph:
+    input:
+        homedir+"{sample}_sorted.bam",
+    output:
+        homedir+"{sample}_fragments.bedgraph",
+    resources:
+        tmpdir = homedir+"tmp/",
+    shell:
+        "genomecov -bg -pc -ibam {input} > {output}"
+
